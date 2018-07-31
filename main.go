@@ -255,11 +255,11 @@ func cloneusergists(ctx context.Context, client *github.Client, user string) err
 		fmt.Println(gisturl)
 
 		//cloning the individual user gists
-		func(userGist *github.Gist, user string, usergistclone *sync.WaitGroup) {
+		func(gisturl string, userGist *github.Gist, user string, usergistclone *sync.WaitGroup) {
 			enqueueJob(func() {
 				gitclone(gisturl, "/tmp/repos/users/"+user+"/"+*userGist.ID, usergistclone)
 			})
-		}(userGist, user, &usergistclone)
+		}(gisturl, userGist, user, &usergistclone)
 	}
 
 	usergistclone.Wait()
@@ -751,7 +751,7 @@ func checkflags(token string, org string, user string, repoURL string, gistURL s
 					os.Exit(2)
 				}
 			}
-		} else if org != "" {
+		} else if org != "" && teamName == "" {
 			var orgRepos []*github.Repository
 
 			opt3 := &github.RepositoryListByOrgOptions{
