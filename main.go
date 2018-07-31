@@ -255,11 +255,11 @@ func cloneusergists(ctx context.Context, client *github.Client, user string) err
 		fmt.Println(gisturl)
 
 		//cloning the individual user gists
-		func(gisturl string, userGist *github.Gist, user string, usergistclone *sync.WaitGroup) {
+		func(userGist *github.Gist, user string, usergistclone *sync.WaitGroup) {
 			enqueueJob(func() {
 				gitclone(gisturl, "/tmp/repos/users/"+user+"/"+*userGist.ID, usergistclone)
 			})
-		}(gisturl, userGist, user, &usergistclone)
+		}(userGist, user, &usergistclone)
 	}
 
 	usergistclone.Wait()
@@ -530,6 +530,15 @@ func mergeOutputJSON(outputfile string) {
 	check(err)
 }
 
+func appendIfMissing(slice []string, i string) []string {
+	for _, ele := range slice {
+		if ele == i {
+			return slice
+		}
+	}
+	return append(slice, i)
+}
+
 func loadThogOutput(outfile string) (map[string][]string, error) {
 	results := make(map[string][]string)
 	output, err := ioutil.ReadFile(outfile)
@@ -547,7 +556,13 @@ func loadThogOutput(outfile string) (map[string][]string, error) {
 		if err != nil {
 			return nil, err
 		}
-		results[issue.Path] = issue.StringsFound
+		if _, found := results[issue.Path]; found {
+			for _, str := range issue.StringsFound {
+				results[issue.Path] = appendIfMissing(results[issue.Path], str)
+			}
+		} else {
+			results[issue.Path] = issue.StringsFound
+		}
 	}
 	return results, nil
 }
@@ -736,7 +751,7 @@ func checkflags(token string, org string, user string, repoURL string, gistURL s
 					os.Exit(2)
 				}
 			}
-		} else if org != "" && teamName == "" {
+		} else if org != "" {
 			var orgRepos []*github.Repository
 
 			opt3 := &github.RepositoryListByOrgOptions{
